@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: checkout-postgres
+    environment:
+      POSTGRES_DB: checkout
+      POSTGRES_USER: checkout
+      POSTGRES_PASSWORD: checkout
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U checkout -d checkout"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

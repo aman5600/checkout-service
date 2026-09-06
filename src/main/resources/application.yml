@@ -1,0 +1,44 @@
+spring:
+  application.name: checkout-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/checkout
+    username: checkout
+    password: checkout
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+checkout:
+  # How long an order may sit PENDING before we stop waiting on the webhook
+  # and go ask the provider ourselves.
+  # ISO-8601 throughout: @Scheduled(fixedDelayString) accepts that form and
+  # plain millis, but not "5s".
+  reconcile-window: PT5S
+
+  job:
+    # Poll cadence. Costs up to this much jitter on the window above.
+    interval: PT1S
+    batch-size: 100
+    # A claimed row is pushed this far out so no other worker takes it while
+    # the status call is in flight. If this process dies, the lease expires
+    # and another pass retries -- safe, because the job only ever reads.
+    lease: PT30S
+
+  refund:
+    # A job-driven FAILED order is re-checked on this decaying schedule, in case
+    # the payment settled after we gave up on it. A single check would only ever
+    # catch a payment that settled at that one moment; the tail catches the rest,
+    # and the last entry is where we stop looking and let the failure stand.
+    verify-schedule: [PT10S, PT1M, PT10M]
+    interval: PT2S
+    batch-size: 100
+    lease: PT30S
+
+  gateway:
+    # Where the fake provider posts its webhooks. Real HTTP, real round trip.
+    webhook-url: http://localhost:8080/webhooks/payment
+    default-scenario: FAST
+
+logging.level.com.example.checkout: INFO

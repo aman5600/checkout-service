@@ -205,3 +205,23 @@ product decisions rather than missing code.
 
 Out of scope throughout: cart, pricing, inventory, and customer-requested
 refunds. This service ends at "the order is paid for".
+
+## How this was built
+
+Built with Claude Code, design first — no code was written until the API
+contract, the fallback mechanism, the storage and the deadline behaviour were
+settled.
+
+The first design used Kafka to carry the five-second delay. That was dropped
+once it became clear the requirement is a timer, not a transport, and Kafka has
+no delayed delivery — emulating it would have been most of the code.
+
+Two defects surfaced in review and were fixed:
+
+- A refund claim had no lease, so a worker that died mid-refund stranded the
+  money as `IN_PROGRESS` forever.
+- Verification asked the provider once, ten seconds after failing an order. A
+  payment settling later than that single moment was never noticed.
+
+Both are on the money path, and both are the kind of thing that only shows up if
+you read generated code as adversarially as you would a colleague's.
